@@ -17,19 +17,83 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+The system will use a hybrid approach for content and collaborative filtering
 
-Some prompts to answer:
+Real world music recommenders (like Spotify) use two main strategies: content based filtering (matchtes audio features) and collaborative filtering (matches from what similar users enjoyed). This system combines both in a simplified way. 
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+**Song Features:** Each song has categorical attributes (genre, mood) and audio characteristics (energy level, acousticness, etc.) that describe its sound and vibe.
 
-You can include a simple diagram or bullet list if helpful.
+**User Profile:** We want to capture a user's taste preferences as: favorite genre, favorite mood, target energy level, and whether they prefer acoustic vs. electronic instruments.
+
+**Scoring Algorithm:** For each song, we calculate a compatibility score (0-100 points) by weighing:
+- **Genre match** (40 pts): Prioritizes songs in their favorite genre
+- **Mood alignment** (30 pts): Ensures emotional fit (happy, chill, etc)
+- **Energy proximity** (20 pts): Tracks songs close to their preferred intensity level
+- **Acoustic preference** (10 pts): Matches instrumentation style
+
+**Collaborative Boost:** If a user has liked songs before, we add a secondary signal that boosts songs similar to those previous favorites—encouraging discovery of related music.
+
+**Recommendations:** We score all songs, sort them by score (highest first), and return the top 5. This prioritizes accuracy and explainability over complex matrix math.
+
+### Algorithm Recipe
+
+```
+For each song:
+  Genre match:     +40 if exact match, else 0
+  Mood match:      +30 if exact match, else 0
+  Energy:          20 × (1 - |song.energy - user.energy|)
+  Acoustic match:  +10 if match, else 0
+  
+  Content Score = sum above (0-100)
+  Boost Score = similarity to liked_songs × 20 (0-20)
+  Final Score = 0.8 × Content + 0.2 × Boost
+```
+
+### Known Biases
+
+- **Genre dominance**: System strongly prefers favorite genre, may miss good songs in other genres
+- **Binary moods**: No partial credit (happy ≠ relaxed, even though similar)
+- **Cold start**: New users get generic recommendations until they like songs
+- **Small catalog**: Only 10 songs limits diversity
+
+### CLI Output Example
+
+Running `python src/main.py` produces:
+
+```
+✓ Loaded 18 songs from data/songs.csv
+
+======================================================================
+🎵 RECOMMENDATIONS FOR: Pop & Happy User (Energy: 0.8)
+======================================================================
+
+#1 Sunrise City                   │ Score:   99.6/100
+    Artist: Neon Echo
+    99.6/100 - genre match (+40), mood match (+30), energy proximity (+19.6), acoustic preference (+10)
+
+#2 Gym Hero                       │ Score:   67.4/100
+    Artist: Max Pulse
+    67.4/100 - genre match (+40), energy proximity (+17.4), acoustic preference (+10)
+
+#3 Rooftop Lights                 │ Score:   59.2/100
+    Artist: Indigo Parade
+    59.2/100 - mood match (+30), energy proximity (+19.2), acoustic preference (+10)
+
+#4 Night Drive Loop               │ Score:   29.0/100
+    Artist: Neon Echo
+    29.0/100 - energy proximity (+19.0), acoustic preference (+10)
+
+#5 Neon Pulse                     │ Score:   28.4/100
+    Artist: SynthWave Masters
+    28.4/100 - energy proximity (+18.4), acoustic preference (+10)
+
+======================================================================
+```
+
+**Verification**: Top result (Sunrise City) is correct! It's the only song with both pop genre AND happy mood that matches the user's energy and acoustic preferences.
 
 ---
+
 
 ## Getting Started
 
